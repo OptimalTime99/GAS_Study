@@ -10,6 +10,9 @@ public class GAS_Study : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
+			"GameplayAbilities",
+			"GameplayTags",
+			"GameplayTasks",
 			"Core",
 			"CoreUObject",
 			"Engine",
