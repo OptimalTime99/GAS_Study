@@ -8,6 +8,7 @@
 #include "AbilitySystemInterface.h"
 #include "GAS_StudyCharacter.generated.h"
 
+class UCharacterAttributeSet;
 class UGameplayAbility;
 class USpringArmComponent;
 class UCameraComponent;
@@ -61,7 +62,9 @@ protected:
 public:
 
 	/** Constructor */
-	AGAS_StudyCharacter();	
+	AGAS_StudyCharacter();
+	
+	virtual void BeginPlay() override;
 
 protected:
 
@@ -113,5 +116,8 @@ private:
 	
 	// 컨트롤러가 캐릭터에 빙의될 때 호출되는 엔진 함수 오버라이드
     virtual void PossessedBy(AController* NewController) override;
+	
+	UPROPERTY()
+	const UCharacterAttributeSet* AttributeSet;
 };
 

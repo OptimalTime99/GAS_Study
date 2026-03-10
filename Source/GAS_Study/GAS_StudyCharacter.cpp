@@ -13,6 +13,7 @@
 #include "AbilitySystemComponent.h"
 #include "GAS_Study.h"
 #include "GAS/GAS_StudyTags.h"
+#include "GAS/Attributes/CharacterAttributeSet.h"
 
 AGAS_StudyCharacter::AGAS_StudyCharacter()
 {
@@ -50,8 +51,17 @@ AGAS_StudyCharacter::AGAS_StudyCharacter()
 	
 	ASC = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("ASC"));
 
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+	AttributeSet = CreateDefaultSubobject<UCharacterAttributeSet>(TEXT("Attribute Set"));
+}
+
+void AGAS_StudyCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if (IsValid(ASC))
+	{
+		AttributeSet = ASC->GetSet<UCharacterAttributeSet>();
+	}
 }
 
 void AGAS_StudyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
