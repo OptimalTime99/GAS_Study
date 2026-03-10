@@ -8,6 +8,7 @@
 #include "AbilitySystemInterface.h"
 #include "GAS_StudyCharacter.generated.h"
 
+class UGameplayAbility;
 class USpringArmComponent;
 class UCameraComponent;
 class UInputAction;
@@ -104,5 +105,13 @@ public:
 private:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "GAS|Abilities", meta=(AllowPrivateAccess = "true"))
     UAbilitySystemComponent* ASC;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS|Abilities", meta=(AllowPrivateAccess = "true"))
+	TSubclassOf<UGameplayAbility> JumpAbilityClass;
+	
+	void GiveDefaultAbilities();
+	
+	// 컨트롤러가 캐릭터에 빙의될 때 호출되는 엔진 함수 오버라이드
+    virtual void PossessedBy(AController* NewController) override;
 };
 

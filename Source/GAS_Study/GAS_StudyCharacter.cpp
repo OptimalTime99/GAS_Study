@@ -59,8 +59,8 @@ void AGAS_StudyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
 		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AGAS_StudyCharacter::DoJumpStart);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AGAS_StudyCharacter::DoJumpEnd);
 
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AGAS_StudyCharacter::Move);
@@ -126,11 +126,48 @@ void AGAS_StudyCharacter::DoLook(float Yaw, float Pitch)
 void AGAS_StudyCharacter::DoJumpStart()
 {
 	// signal the character to jump
-	Jump();
+	// Jump();
+	
+	if (ASC)
+    {
+        // 찾고자 하는 태그를 컨테이너에 담습니다.
+        FGameplayTagContainer TagContainer;
+        TagContainer.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Action.Jump")));
+
+        // 해당 태그를 가진 어빌리티(GA_Jump)의 실행을 시도합니다.
+        // bAllowRemoteActivation 매개변수는 기본값(true)을 사용하여 서버에도 실행을 요청합니다.
+        ASC->TryActivateAbilitiesByTag(TagContainer);
+    }
 }
 
 void AGAS_StudyCharacter::DoJumpEnd()
 {
 	// signal the character to stop jumping
 	StopJumping();
+}
+
+void AGAS_StudyCharacter::GiveDefaultAbilities()
+{
+	if (ASC && JumpAbilityClass)
+	{
+		if (HasAuthority())
+		{
+			FGameplayAbilitySpec AbilitySpec(JumpAbilityClass, 1, INDEX_NONE, this);
+			ASC->GiveAbility(AbilitySpec);
+		}
+	}
+}
+
+void AGAS_StudyCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	
+	if (ASC)
+    {
+        // 1. ASC에게 Owner와 Avatar가 이 캐릭터(this)임을 알려주어 초기화합니다. (매우 중요!)
+        ASC->InitAbilityActorInfo(this, this);
+
+        // 2. 어빌리티 부여 함수 호출
+        GiveDefaultAbilities();
+    }
 }
