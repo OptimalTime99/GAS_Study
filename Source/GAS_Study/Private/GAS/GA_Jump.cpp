@@ -4,6 +4,7 @@
 #include "GAS/GA_Jump.h"
 #include "AbilitySystemComponent.h"
 #include "GameFramework/Character.h"
+#include "GAS/GAS_StudyTags.h"
 
 UGA_Jump::UGA_Jump()
 {
@@ -11,7 +12,7 @@ UGA_Jump::UGA_Jump()
     InstancingPolicy = EGameplayAbilityInstancingPolicy::NonInstanced;
 
     // 2. 어빌리티 태그 설정 (언리얼 에디터의 프로젝트 세팅 > Gameplay Tags에 미리 'Ability.Action.Jump'가 추가되어 있어야 합니다)
-    FGameplayTag JumpTag = FGameplayTag::RequestGameplayTag(FName("Ability.Action.Jump"));
+    FGameplayTag JumpTag = GAS_StudyTags::Ability_Action_Jump;
     AbilityTags.AddTag(JumpTag);
 }
 

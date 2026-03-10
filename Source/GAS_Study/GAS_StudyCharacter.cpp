@@ -12,6 +12,7 @@
 #include "InputActionValue.h"
 #include "AbilitySystemComponent.h"
 #include "GAS_Study.h"
+#include "GAS/GAS_StudyTags.h"
 
 AGAS_StudyCharacter::AGAS_StudyCharacter()
 {
@@ -132,7 +133,7 @@ void AGAS_StudyCharacter::DoJumpStart()
     {
         // 찾고자 하는 태그를 컨테이너에 담습니다.
         FGameplayTagContainer TagContainer;
-        TagContainer.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Action.Jump")));
+        TagContainer.AddTag(GAS_StudyTags::Ability_Action_Jump);
 
         // 해당 태그를 가진 어빌리티(GA_Jump)의 실행을 시도합니다.
         // bAllowRemoteActivation 매개변수는 기본값(true)을 사용하여 서버에도 실행을 요청합니다.
