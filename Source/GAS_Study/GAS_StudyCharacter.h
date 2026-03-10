@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
+#include "AbilitySystemInterface.h"
 #include "GAS_StudyCharacter.generated.h"
 
 class USpringArmComponent;
@@ -19,8 +20,15 @@ DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
  *  Implements a controllable orbiting camera
  */
 UCLASS(abstract)
-class AGAS_StudyCharacter : public ACharacter
+class AGAS_StudyCharacter : public ACharacter, public IAbilitySystemInterface
 {
+public:
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
+	{
+		return ASC;
+	}
+
+private:
 	GENERATED_BODY()
 
 	/** Camera boom positioning the camera behind the character */
@@ -92,5 +100,9 @@ public:
 
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	
+private:
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "GAS|Abilities", meta=(AllowPrivateAccess = "true"))
+    UAbilitySystemComponent* ASC;
 };
 
