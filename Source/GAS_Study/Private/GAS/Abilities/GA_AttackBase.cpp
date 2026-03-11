@@ -3,9 +3,14 @@
 
 #include "GAS/Abilities/GA_AttackBase.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
 #include "GAS_StudyCharacter.h"
 #include "GAS/GAS_StudyTags.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "GAS/Attributes/CharacterAttributeSet.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 UGA_AttackBase::UGA_AttackBase()
 {
@@ -35,20 +40,11 @@ void UGA_AttackBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
     }
 }
 
-bool UGA_AttackBase::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
-                                        const FGameplayAbilityActorInfo* ActorInfo,
-                                        const FGameplayTagContainer* SourceTags,
-                                        const FGameplayTagContainer* TargetTags,
-                                        FGameplayTagContainer* OptionalRelevantTags) const
-{
-    return Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
-}
-
 void UGA_AttackBase::Attack()
 {
     if (AttackMontage)
     {
-        // 🌟 수정: 캐릭터의 PlayAnimMontage 대신 GAS 전용 태스크를 생성합니다.
+        // 🌟 1. 몽타주 재생 태스크
         UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
             this,
             NAME_None,
@@ -63,6 +59,15 @@ void UGA_AttackBase::Attack()
 
         // 태스크 실행!
         MontageTask->ReadyForActivation();
+
+        // 2. 🌟 노티파이가 쏘는 Hit 이벤트를 기다리는 태스크
+        UAbilityTask_WaitGameplayEvent* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+            this,
+            GAS_StudyTags::Ability_Action_Attack, // 기다릴 태그
+            nullptr, false, false);
+
+        WaitEventTask->EventReceived.AddDynamic(this, &UGA_AttackBase::OnHitEventReceived);
+        WaitEventTask->ReadyForActivation();
     }
     else
     {
@@ -74,4 +79,74 @@ void UGA_AttackBase::Attack()
 void UGA_AttackBase::OnMontageCompleted()
 {
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
+void UGA_AttackBase::OnHitEventReceived(FGameplayEventData Payload)
+{
+    // 노티파이에서 호출됨!
+    if (!Character.IsValid()) return;
+    AActor* Avatar = Character.Get();
+
+    FVector Forward = Avatar->GetActorForwardVector();
+    FVector Start = Avatar->GetActorLocation() + Forward * TraceStartDistance;
+    FVector End = Avatar->GetActorLocation() + Forward * TraceEndDistance;
+
+    TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+    ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+
+    TArray<FHitResult> HitResults;
+    TArray<AActor*> ActorsToIgnore;
+    ActorsToIgnore.Add(Avatar);
+
+    EDrawDebugTrace::Type DebugType = bShowDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
+
+    bool bHit = UKismetSystemLibrary::SphereTraceMultiForObjects(
+        Avatar,
+        Start,
+        End,
+        TraceRadius,
+        ObjectTypes,
+        false,
+        ActorsToIgnore,
+        DebugType,
+        HitResults,
+        true,
+        FLinearColor::Red,
+        FLinearColor::Green,
+        2.0f);
+
+    if (bHit && DamageEffectClass)
+    {
+        TSet<AActor*> ProcessedActors;
+        for (const FHitResult& Hit : HitResults)
+        {
+            AActor* HitActor = Hit.GetActor();
+            if (HitActor && !ProcessedActors.Contains(HitActor))
+            {
+                ProcessedActors.Add(HitActor);
+
+                // 어빌리티 내부이므로 ASC를 쉽게 가져와서 데미지를 적용할 수 있습니다.
+                UAbilitySystemComponent* TargetASC =
+                    UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+                if (TargetASC)
+                {
+                    FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(
+                        DamageEffectClass, GetAbilityLevel());
+                    if (SpecHandle.IsValid())
+                    {
+                        // ApplyGameplayEffectSpecToTarget(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, SpecHandle, TargetDataHandle /*필요시*/);
+                        // 더 간단하게:
+                        TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+                        UE_LOG(LogTemp, Warning, TEXT("타겟 액터: %s"), *HitActor->GetName());
+                        if (const UCharacterAttributeSet* TargetAttributeSet = TargetASC->GetSet<
+                            UCharacterAttributeSet>())
+                        {
+                            float TargetHealth = TargetAttributeSet->GetHealth();
+                            UE_LOG(LogTemp, Warning, TEXT("타겟의 현재 체력: %f"), TargetHealth);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

@@ -22,13 +22,6 @@ public:
         const FGameplayAbilityActorInfo* ActorInfo,
         const FGameplayAbilityActivationInfo ActivationInfo,
         const FGameplayEventData* TriggerEventData) override;
-
-    virtual bool CanActivateAbility(
-        const FGameplayAbilitySpecHandle Handle,
-        const FGameplayAbilityActorInfo* ActorInfo,
-        const FGameplayTagContainer* SourceTags = nullptr,
-        const FGameplayTagContainer* TargetTags = nullptr,
-        OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
     
 protected:
     /** 공격 처리 */
@@ -43,4 +36,25 @@ protected:
     TObjectPtr<UAnimMontage> AttackMontage;
     
     TWeakObjectPtr<class AGAS_StudyCharacter> Character;
+    
+protected:
+    // 🌟 이벤트가 들어왔을 때 실행될 함수
+    UFUNCTION()
+    void OnHitEventReceived(FGameplayEventData Payload);
+
+    // 🌟 노티파이에 있던 설정들을 어빌리티로 이사시킵니다.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Damage")
+    TSubclassOf<class UGameplayEffect> DamageEffectClass;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Trace")
+    float TraceRadius = 50.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Trace")
+    float TraceStartDistance = 50.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Trace")
+    float TraceEndDistance = 150.0f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Debug")
+    bool bShowDebug = false;
 };
