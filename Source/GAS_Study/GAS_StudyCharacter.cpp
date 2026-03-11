@@ -77,6 +77,12 @@ void AGAS_StudyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
                                            &AGAS_StudyCharacter::DoMeleeAttack);
         EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Started, this,
                                            &AGAS_StudyCharacter::DoHeavyAttack);
+
+        // Defensing
+        EnhancedInputComponent->BindAction(DefenseAction, ETriggerEvent::Started, this,
+                                           &AGAS_StudyCharacter::DoDefenseStart);
+        EnhancedInputComponent->BindAction(DefenseAction, ETriggerEvent::Completed, this,
+                                           &AGAS_StudyCharacter::DoDefenseEnd);
     }
     else
     {
@@ -107,6 +113,8 @@ void AGAS_StudyCharacter::Look(const FInputActionValue& Value)
 
 void AGAS_StudyCharacter::DoMove(float Right, float Forward)
 {
+    if (ASC->HasMatchingGameplayTag(GAS_StudyTags::State_Blocking)) return;
+
     if (GetController() != nullptr)
     {
         // find out which way is forward
@@ -185,6 +193,28 @@ void AGAS_StudyCharacter::DoHeavyAttack()
         TagContainer.AddTag(GAS_StudyTags::Ability_Action_HeavyAttack);
 
         ASC->TryActivateAbilitiesByTag(TagContainer);
+    }
+}
+
+void AGAS_StudyCharacter::DoDefenseStart()
+{
+    if (ASC)
+    {
+        FGameplayTagContainer TagContainer;
+        TagContainer.AddTag(GAS_StudyTags::Ability_Action_Defense);
+
+        ASC->TryActivateAbilitiesByTag(TagContainer);
+    }
+}
+
+void AGAS_StudyCharacter::DoDefenseEnd()
+{
+    if (ASC)
+    {
+        FGameplayTagContainer TagContainer;
+        TagContainer.AddTag(GAS_StudyTags::Ability_Action_Defense);
+
+        ASC->CancelAbilities(&TagContainer);
     }
 }
 

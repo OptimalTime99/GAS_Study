@@ -9,4 +9,6 @@ namespace GAS_StudyTags
     GAS_STUDY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Action_LightAttack);
     GAS_STUDY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Action_MeleeAttack);
     GAS_STUDY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Action_HeavyAttack);
+    GAS_STUDY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Action_Defense);
+    GAS_STUDY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Blocking);
 }

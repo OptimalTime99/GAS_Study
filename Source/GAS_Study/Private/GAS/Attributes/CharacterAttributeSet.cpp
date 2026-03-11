@@ -7,6 +7,8 @@ UCharacterAttributeSet::UCharacterAttributeSet()
 {
     InitHealth(50.0f);
     InitMaxHealth(100.0f);
+    InitDefense(0.0f);
+    InitMaxDefense(100.0f);
 }
 
 void UCharacterAttributeSet::PreAttributeChange(
@@ -27,6 +29,11 @@ void UCharacterAttributeSet::PreAttributeChange(
         // 최대 체력 값 자체가 음수가 되지 않도록 최소 0으로 방어해 줍니다.
         NewValue = FMath::Max(NewValue, 0.0f);
     }
+
+    if (Attribute == GetDefenseAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, -30.0f, GetMaxDefense());
+    }
 }
 
 void UCharacterAttributeSet::PostGameplayEffectExecute(
@@ -45,5 +52,10 @@ void UCharacterAttributeSet::PostGameplayEffectExecute(
         /* * 이곳에 추가적인 게임 로직을 작성하기 좋습니다.
          * 예: if (GetHealth() <= 0.0f) { 캐릭터 사망 처리 함수 호출 }
          */
+    }
+
+    if (Data.EvaluatedData.Attribute == GetDefenseAttribute())
+    {
+        SetDefense(FMath::Clamp(GetDefense(), -30.0f, GetMaxDefense()));
     }
 }

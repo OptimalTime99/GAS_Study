@@ -28,7 +28,15 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attributes")
     FGameplayAttributeData MaxHealth;
     ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, MaxHealth)
-    
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attributes")
+    FGameplayAttributeData Defense;
+    ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, Defense)
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attributes")
+    FGameplayAttributeData MaxDefense;
+    ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, MaxDefense)
+
 public:
     // 어트리뷰트의 '현재 값'이 변경되기 직전에 호출되는 함수 (필터링 역할)
     virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;

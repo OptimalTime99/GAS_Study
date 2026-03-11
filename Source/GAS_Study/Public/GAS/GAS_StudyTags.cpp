@@ -7,4 +7,6 @@ namespace GAS_StudyTags
     UE_DEFINE_GAMEPLAY_TAG(Ability_Action_LightAttack, "Ability.Action.LightAttack");
     UE_DEFINE_GAMEPLAY_TAG(Ability_Action_MeleeAttack, "Ability.Action.MeleeAttack");
     UE_DEFINE_GAMEPLAY_TAG(Ability_Action_HeavyAttack, "Ability.Action.HeavyAttack");
+    UE_DEFINE_GAMEPLAY_TAG(Ability_Action_Defense, "Ability.Action.Defense");
+    UE_DEFINE_GAMEPLAY_TAG(State_Blocking, "State.Blocking");
 }

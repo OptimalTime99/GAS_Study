@@ -68,6 +68,8 @@ protected:
     UPROPERTY(EditAnywhere, Category="Input")
     UInputAction* HeavyAttackAction;
 
+    UPROPERTY(EditAnywhere, Category="Input")
+    UInputAction* DefenseAction;
 
 public:
     /** Constructor */
@@ -110,6 +112,12 @@ public:
     UFUNCTION(BlueprintCallable, Category="Input")
     virtual void DoHeavyAttack();
 
+    UFUNCTION(BlueprintCallable, Category="Input")
+    virtual void DoDefenseStart();
+
+    // 기존 DoDefense 아래에 추가
+    UFUNCTION(BlueprintCallable, Category="Input")
+    virtual void DoDefenseEnd();
 
 public:
     /** Returns CameraBoom subobject **/
