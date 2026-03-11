@@ -55,4 +55,11 @@ protected:
     // 🌟 추가: 몽타주에서 기다릴 방어 준비 완료 태그 (예: Event.Defense.Ready)
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Tags")
     FGameplayTag DefenseReadyEventTag;
+    
+    /** 가드 유지 중 지속적으로 스태미나를 깎을 Effect 클래스 (Infinite, Period 1.0 등) */
+    UPROPERTY(EditDefaultsOnly, Category = "Block")
+    TSubclassOf<UGameplayEffect> StaminaDrainEffect;
+
+    /** 스태미나 감소 이펙트 영수증 */
+    FActiveGameplayEffectHandle ActiveStaminaDrainHandle;
 };

@@ -18,6 +18,14 @@ void UPlayerHUDWidget::InitWidget(UAbilitySystemComponent* InASC)
         ASC->GetGameplayAttributeValueChangeDelegate(
                UCharacterAttributeSet::GetMaxHealthAttribute())
            .Remove(MaxHealthChangedDelegateHandle);
+        
+        ASC->GetGameplayAttributeValueChangeDelegate(
+               UCharacterAttributeSet::GetStaminaAttribute())
+           .Remove(StaminaChangedDelegateHandle);
+        
+        ASC->GetGameplayAttributeValueChangeDelegate(
+               UCharacterAttributeSet::GetMaxStaminaAttribute())
+           .Remove(MaxStaminaChangedDelegateHandle);
     }
 
     ASC = InASC;
@@ -28,10 +36,20 @@ void UPlayerHUDWidget::InitWidget(UAbilitySystemComponent* InASC)
         UCharacterAttributeSet::GetHealthAttribute(), bFound);
     MaxHealth = ASC->GetGameplayAttributeValue(
         UCharacterAttributeSet::GetMaxHealthAttribute(), bFound);
+    
+    CurrentStamina = ASC->GetGameplayAttributeValue(
+        UCharacterAttributeSet::GetStaminaAttribute(), bFound);
+    MaxStamina = ASC->GetGameplayAttributeValue(
+      UCharacterAttributeSet::GetMaxStaminaAttribute(), bFound);
 
     if (HP_Bar && MaxHealth > 0.f)
     {
         HP_Bar->SetPercent(CurrentHealth / MaxHealth);
+    }
+    
+    if (Stamina_Bar && MaxStamina > 0.f)
+    {
+        Stamina_Bar->SetPercent(CurrentStamina / MaxStamina);
     }
 
     // 2. 델리게이트 바인딩
@@ -41,6 +59,13 @@ void UPlayerHUDWidget::InitWidget(UAbilitySystemComponent* InASC)
     MaxHealthChangedDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(
                                             UCharacterAttributeSet::GetMaxHealthAttribute())
                                         .AddUObject(this, &UPlayerHUDWidget::OnMaxHealthChanged);
+    
+    StaminaChangedDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(
+                                         UCharacterAttributeSet::GetStaminaAttribute())
+                                     .AddUObject(this, &UPlayerHUDWidget::OnStaminaChanged);
+    MaxStaminaChangedDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(
+                                            UCharacterAttributeSet::GetMaxStaminaAttribute())
+                                        .AddUObject(this, &UPlayerHUDWidget::OnMaxStaminaChanged);
 }
 
 // 체력이 변했을 때
@@ -66,4 +91,28 @@ void UPlayerHUDWidget::OnMaxHealthChanged(const FOnAttributeChangeData& Data)
         float Percent = FMath::Clamp(CurrentHealth / MaxHealth, 0.f, 1.0f);
         HP_Bar->SetPercent(Percent);
     }
+}
+
+// 스태미나가 변했을 때
+void UPlayerHUDWidget::OnStaminaChanged(const FOnAttributeChangeData& Data)
+{
+    CurrentStamina = Data.NewValue;
+    
+    if (Stamina_Bar && MaxStamina > 0.f)
+    {
+        float Percent = FMath::Clamp(CurrentStamina / MaxStamina, 0.f, 1.0f);
+        Stamina_Bar->SetPercent(Percent);
+    }
+}
+
+// 최대 스태미나가 변했을 때
+void UPlayerHUDWidget::OnMaxStaminaChanged(const FOnAttributeChangeData& Data)
+{
+    MaxStamina = Data.NewValue;
+    
+    if (Stamina_Bar && MaxStamina > 0.f)
+    {
+        float Percent = FMath::Clamp(CurrentStamina / MaxStamina, 0.f, 1.0f);
+        Stamina_Bar->SetPercent(Percent);
+    }   
 }

@@ -36,6 +36,14 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attributes")
     FGameplayAttributeData MaxDefense;
     ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, MaxDefense)
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attributes")
+    FGameplayAttributeData Stamina;
+    ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, Stamina)
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attributes")
+    FGameplayAttributeData MaxStamina;
+    ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, MaxStamina)
 
 public:
     // 어트리뷰트의 '현재 값'이 변경되기 직전에 호출되는 함수 (필터링 역할)

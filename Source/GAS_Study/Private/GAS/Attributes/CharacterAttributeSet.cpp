@@ -9,6 +9,8 @@ UCharacterAttributeSet::UCharacterAttributeSet()
     InitMaxHealth(100.0f);
     InitDefense(0.0f);
     InitMaxDefense(100.0f);
+    InitStamina(100.0f);
+    InitMaxStamina(100.0f);
 }
 
 void UCharacterAttributeSet::PreAttributeChange(
@@ -34,6 +36,13 @@ void UCharacterAttributeSet::PreAttributeChange(
     {
         NewValue = FMath::Clamp(NewValue, -30.0f, GetMaxDefense());
     }
+    
+    if (Attribute == GetStaminaAttribute())
+    {
+        NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxStamina());
+    }
+    
+    
 }
 
 void UCharacterAttributeSet::PostGameplayEffectExecute(
@@ -57,5 +66,10 @@ void UCharacterAttributeSet::PostGameplayEffectExecute(
     if (Data.EvaluatedData.Attribute == GetDefenseAttribute())
     {
         SetDefense(FMath::Clamp(GetDefense(), -30.0f, GetMaxDefense()));
+    }
+    
+    if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
+    {
+        SetStamina(FMath::Clamp(GetStamina(), 0.0f, GetMaxStamina()));
     }
 }

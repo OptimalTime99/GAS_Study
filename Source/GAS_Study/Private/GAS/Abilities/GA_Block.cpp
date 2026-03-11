@@ -22,11 +22,19 @@ void UGA_Block::ActivateAbility(
 {
     Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
+    if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+    {
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+        return;
+    }
+
     Character = Cast<AGAS_StudyCharacter>(ActorInfo->AvatarActor.Get());
 
     if (Character.IsValid())
     {
         Defense();
+
+        CommitAbility(Handle, ActorInfo, ActivationInfo);
     }
     else
     {
@@ -38,12 +46,23 @@ void UGA_Block::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGamep
                            const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
                            bool bWasCancelled)
 {
-    // 저장해 두었던 버프 영수증이 유효하다면, 방어력 버프를 내 몸에서 지워버립니다.
-    if (ActiveDefenseBuffHandle.IsValid() && Character.IsValid())
+    if (Character.IsValid())
     {
-        Character->GetAbilitySystemComponent()->RemoveActiveGameplayEffect(ActiveDefenseBuffHandle);
-        
-        ActiveDefenseBuffHandle.Invalidate();
+        UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
+
+        // 1. 방어력 버프 해제
+        if (ActiveDefenseBuffHandle.IsValid())
+        {
+            ASC->RemoveActiveGameplayEffect(ActiveDefenseBuffHandle);
+            ActiveDefenseBuffHandle.Invalidate();
+        }
+
+        // 🌟 2. 스태미나 지속 소모 디버프 강제 해제! (중첩 방지)
+        if (ActiveStaminaDrainHandle.IsValid())
+        {
+            ASC->RemoveActiveGameplayEffect(ActiveStaminaDrainHandle);
+            ActiveStaminaDrainHandle.Invalidate();
+        }
     }
 
     Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
@@ -96,20 +115,32 @@ void UGA_Block::OnDefenseReady(FGameplayEventData Payload)
 {
     // 이미 버프가 있다면 종료
     if (ActiveDefenseBuffHandle.IsValid()) return;
-    
-    if (DefenseBuffEffect && Character.IsValid())
+
+    if (Character.IsValid())
     {
-        FGameplayEffectContextHandle EffectContext = Character->GetAbilitySystemComponent()->MakeEffectContext();
+        UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
+        FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
         EffectContext.AddSourceObject(this);
 
-        FGameplayEffectSpecHandle SpecHandle = Character->GetAbilitySystemComponent()->MakeOutgoingSpec(
-            DefenseBuffEffect, 1.0f, EffectContext);
-        if (SpecHandle.IsValid())
+        // 1. 방어력 +10 버프 적용
+        if (DefenseBuffEffect)
         {
-            // 여기서 버프(State.Blocking)가 캐릭터에게 적용됩니다.
-            ActiveDefenseBuffHandle = Character->GetAbilitySystemComponent()->ApplyGameplayEffectSpecToSelf(
-                *SpecHandle.Data.Get());
-            UE_LOG(LogTemp, Warning, TEXT("가드 자세 완료! 이제부터 데미지를 막습니다."));
+            FGameplayEffectSpecHandle BuffSpec = ASC->MakeOutgoingSpec(DefenseBuffEffect, 1.0f, EffectContext);
+            if (BuffSpec.IsValid())
+            {
+                ActiveDefenseBuffHandle = ASC->ApplyGameplayEffectSpecToSelf(*BuffSpec.Data.Get());
+            }
+        }
+
+        // 🌟 2. 스태미나 지속 소모 디버프 적용 (Infinite)
+        if (StaminaDrainEffect)
+        {
+            FGameplayEffectSpecHandle DrainSpec = ASC->MakeOutgoingSpec(StaminaDrainEffect, 1.0f, EffectContext);
+            if (DrainSpec.IsValid())
+            {
+                // 여기서 영수증을 챙깁니다!
+                ActiveStaminaDrainHandle = ASC->ApplyGameplayEffectSpecToSelf(*DrainSpec.Data.Get());
+            }
         }
     }
 }
