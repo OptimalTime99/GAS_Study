@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayEffect.h"
+#include "GAS/Attributes/CharacterAttributeSet.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 UAN_ApplyDamage::UAN_ApplyDamage()
@@ -104,6 +105,8 @@ void UAN_ApplyDamage::Notify(
             AttackerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 
             UE_LOG(LogTemp, Log, TEXT("Damage applied to:%s"), *HitActor->GetName());
+            float TargetHealth = TargetASC->GetNumericAttribute(UCharacterAttributeSet::GetHealthAttribute());
+            UE_LOG(LogTemp, Warning, TEXT("타겟의 현재 체력: %f"), TargetHealth);
         }
     }
 }
