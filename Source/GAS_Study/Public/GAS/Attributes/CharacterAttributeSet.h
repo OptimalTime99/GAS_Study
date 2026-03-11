@@ -20,7 +20,7 @@ class GAS_STUDY_API UCharacterAttributeSet : public UAttributeSet
 
 public:
     UCharacterAttributeSet();
-    
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Attributes")
     FGameplayAttributeData Health;
     ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, Health)

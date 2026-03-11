@@ -17,7 +17,6 @@ UGA_AttackBase::UGA_AttackBase()
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 
     FGameplayTag AttackTag = GAS_StudyTags::Ability_Action_Attack;
-    AbilityTags.AddTag(AttackTag);
     ActivationOwnedTags.AddTag(AttackTag);
 }
 
@@ -60,10 +59,15 @@ void UGA_AttackBase::Attack()
         // 태스크 실행!
         MontageTask->ReadyForActivation();
 
+        if (!HitEventTag.IsValid())
+        {
+            UE_LOG(LogTemp, Error, TEXT("[%s] HitEventTag가 세팅되지 않았습니다!"), *GetName());
+        }
+
         // 2. 🌟 노티파이가 쏘는 Hit 이벤트를 기다리는 태스크
         UAbilityTask_WaitGameplayEvent* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
             this,
-            GAS_StudyTags::Ability_Action_Attack, // 기다릴 태그
+            HitEventTag, // 기다릴 태그
             nullptr, false, false);
 
         WaitEventTask->EventReceived.AddDynamic(this, &UGA_AttackBase::OnHitEventReceived);

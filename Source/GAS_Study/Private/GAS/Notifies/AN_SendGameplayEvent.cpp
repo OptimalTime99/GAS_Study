@@ -16,6 +16,12 @@ void UAN_SendGameplayEvent::Notify(
     if (!MeshComp) return;
     AActor* Owner = MeshComp->GetOwner();
     if (!Owner) return;
+    
+    if (!EventTag.IsValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("EventTag가 비어 있습니다."));
+        return;
+    }
 
     FGameplayEventData Payload;
     Payload.Instigator = Owner;

@@ -71,7 +71,12 @@ void AGAS_StudyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
         EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGAS_StudyCharacter::Look);
 
         // Attacking
-        EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &AGAS_StudyCharacter::DoAttack);
+        EnhancedInputComponent->BindAction(LightAttackAction, ETriggerEvent::Started, this,
+                                           &AGAS_StudyCharacter::DoLightAttack);
+        EnhancedInputComponent->BindAction(MeleeAttackAction, ETriggerEvent::Started, this,
+                                           &AGAS_StudyCharacter::DoMeleeAttack);
+        EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Started, this,
+                                           &AGAS_StudyCharacter::DoHeavyAttack);
     }
     else
     {
@@ -150,12 +155,34 @@ void AGAS_StudyCharacter::DoJumpEnd()
     StopJumping();
 }
 
-void AGAS_StudyCharacter::DoAttack()
+void AGAS_StudyCharacter::DoLightAttack()
 {
     if (ASC)
     {
         FGameplayTagContainer TagContainer;
-        TagContainer.AddTag(GAS_StudyTags::Ability_Action_Attack);
+        TagContainer.AddTag(GAS_StudyTags::Ability_Action_LightAttack);
+
+        ASC->TryActivateAbilitiesByTag(TagContainer);
+    }
+}
+
+void AGAS_StudyCharacter::DoMeleeAttack()
+{
+    if (ASC)
+    {
+        FGameplayTagContainer TagContainer;
+        TagContainer.AddTag(GAS_StudyTags::Ability_Action_MeleeAttack);
+
+        ASC->TryActivateAbilitiesByTag(TagContainer);
+    }
+}
+
+void AGAS_StudyCharacter::DoHeavyAttack()
+{
+    if (ASC)
+    {
+        FGameplayTagContainer TagContainer;
+        TagContainer.AddTag(GAS_StudyTags::Ability_Action_HeavyAttack);
 
         ASC->TryActivateAbilitiesByTag(TagContainer);
     }

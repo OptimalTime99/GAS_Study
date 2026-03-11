@@ -22,11 +22,11 @@ public:
         const FGameplayAbilityActorInfo* ActorInfo,
         const FGameplayAbilityActivationInfo ActivationInfo,
         const FGameplayEventData* TriggerEventData) override;
-    
+
 protected:
     /** 공격 처리 */
     void Attack();
-    
+
     // 🌟 추가: 몽타주 재생이 끝났을 때 호출될 함수
     UFUNCTION()
     void OnMontageCompleted();
@@ -34,9 +34,9 @@ protected:
     /** 공격 애니메이션 Montage */
     UPROPERTY(EditDefaultsOnly, Category = "Combat")
     TObjectPtr<UAnimMontage> AttackMontage;
-    
+
     TWeakObjectPtr<class AGAS_StudyCharacter> Character;
-    
+
 protected:
     // 🌟 이벤트가 들어왔을 때 실행될 함수
     UFUNCTION()
@@ -54,7 +54,11 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Trace")
     float TraceEndDistance = 150.0f;
-    
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Debug")
     bool bShowDebug = false;
+
+    // 어빌리티가 몽타주 재생 중 기다릴 타격 이벤트 태그
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Tags")
+    FGameplayTag HitEventTag;
 };
