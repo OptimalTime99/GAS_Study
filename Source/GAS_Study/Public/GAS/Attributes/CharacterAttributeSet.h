@@ -30,5 +30,9 @@ public:
     ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, MaxHealth)
     
 public:
+    // 어트리뷰트의 '현재 값'이 변경되기 직전에 호출되는 함수 (필터링 역할)
+    virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
+
+    // 게임플레이 이펙트가 '베이스 값'을 변경한 직후에 호출되는 함수 (로직 확정 역할)
     virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 };
