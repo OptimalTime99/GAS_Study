@@ -34,7 +34,8 @@ void UGA_Block::ActivateAbility(
     if (Character.IsValid())
     {
         // 🌟 1. 입구 컷 (발동 조건 검사): 스태미나가 0 이하라면 아예 실행을 취소합니다!
-        if (const UCharacterAttributeSet* AttrSet = Character->GetAbilitySystemComponent()->GetSet<UCharacterAttributeSet>())
+        if (const UCharacterAttributeSet* AttrSet = Character->GetAbilitySystemComponent()->GetSet<
+            UCharacterAttributeSet>())
         {
             if (AttrSet->GetStamina() <= 0.0f)
             {
@@ -50,7 +51,7 @@ void UGA_Block::ActivateAbility(
             EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
             return;
         }
-        
+
         Defense();
 
         CommitAbility(Handle, ActorInfo, ActivationInfo);
@@ -89,6 +90,27 @@ void UGA_Block::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGamep
 
 void UGA_Block::Defense()
 {
+#if ENABLE_DRAW_DEBUG
+    AActor* AvatarActor = GetAvatarActorFromActorInfo();
+    if (AvatarActor)
+    {
+        FVector Location = AvatarActor->GetActorLocation();
+        FVector Forward = AvatarActor->GetActorForwardVector();
+
+        // 정면 방향 (파란색)
+        DrawDebugLine(GetWorld(), Location,
+                      Location + Forward * 200.f, FColor::Blue, false, 3.f, 0, 2.f);
+
+        // 블록 가능 범위 (좌우 60도, 녹색)
+        FVector Left = Forward.RotateAngleAxis(-60.f, FVector::UpVector);
+        FVector Right = Forward.RotateAngleAxis(60.f, FVector::UpVector);
+        DrawDebugLine(GetWorld(), Location,
+                      Location + Left * 150.f, FColor::Green, false, 3.f, 0, 1.f);
+        DrawDebugLine(GetWorld(), Location,
+                      Location + Right * 150.f, FColor::Green, false, 3.f, 0, 1.f);
+    }
+#endif
+
     if (DefenseMontage && Character.IsValid())
     {
         // 1. 몽타주 재생 태스크
