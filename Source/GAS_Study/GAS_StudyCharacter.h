@@ -63,8 +63,6 @@ public:
 
 	/** Constructor */
 	AGAS_StudyCharacter();
-	
-	virtual void BeginPlay() override;
 
 protected:
 

@@ -54,16 +54,6 @@ AGAS_StudyCharacter::AGAS_StudyCharacter()
 	AttributeSet = CreateDefaultSubobject<UCharacterAttributeSet>(TEXT("Attribute Set"));
 }
 
-void AGAS_StudyCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-	
-	if (IsValid(ASC))
-	{
-		AttributeSet = ASC->GetSet<UCharacterAttributeSet>();
-	}
-}
-
 void AGAS_StudyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	// Set up action bindings
