@@ -7,6 +7,7 @@
 #include "GAS_StudyCharacter.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "GAS/Attributes/CharacterAttributeSet.h"
 
 
 UGA_Block::UGA_Block()
@@ -32,6 +33,24 @@ void UGA_Block::ActivateAbility(
 
     if (Character.IsValid())
     {
+        // 🌟 1. 입구 컷 (발동 조건 검사): 스태미나가 0 이하라면 아예 실행을 취소합니다!
+        if (const UCharacterAttributeSet* AttrSet = Character->GetAbilitySystemComponent()->GetSet<UCharacterAttributeSet>())
+        {
+            if (AttrSet->GetStamina() <= 0.0f)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("스태미나가 없어서 가드를 올릴 수 없습니다!"));
+                EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+                return;
+            }
+        }
+
+        // 🌟 2. 초기 코스트 지불 (가드 올릴 때 1회성 소모 GE가 있다면 여기서 처리됨)
+        if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+        {
+            EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+            return;
+        }
+        
         Defense();
 
         CommitAbility(Handle, ActorInfo, ActivationInfo);

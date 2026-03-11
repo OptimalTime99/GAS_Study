@@ -2,6 +2,7 @@
 
 #include "GAS/Attributes/CharacterAttributeSet.h"
 #include "GameplayEffectExtension.h" // Data 구조체 인식
+#include "GAS/GAS_StudyTags.h"
 
 UCharacterAttributeSet::UCharacterAttributeSet()
 {
@@ -68,8 +69,27 @@ void UCharacterAttributeSet::PostGameplayEffectExecute(
         SetDefense(FMath::Clamp(GetDefense(), -30.0f, GetMaxDefense()));
     }
     
+    // 🌟 스태미나가 변경되었을 때의 로직
     if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
     {
+        // 1. 최소 0, 최대 MaxStamina로 값 제한
         SetStamina(FMath::Clamp(GetStamina(), 0.0f, GetMaxStamina()));
+
+        // 🌟 2. 강제 가드 해제 로직: 깎인 스태미나가 0 이하라면?
+        if (GetStamina() <= 0.0f)
+        {
+            UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+            if (ASC)
+            {
+                // 방어 어빌리티의 Asset Tag를 컨테이너에 담습니다.
+                FGameplayTagContainer TagContainer;
+                TagContainer.AddTag(GAS_StudyTags::Ability_Action_Defense);
+
+                // 해당 태그를 가진 어빌리티(GA_Block)를 강제로 취소(Cancel)시킵니다!
+                ASC->CancelAbilities(&TagContainer);
+                
+                UE_LOG(LogTemp, Warning, TEXT("스태미나 0 도달! 방어를 강제로 해제합니다."));
+            }
+        }
     }
 }
