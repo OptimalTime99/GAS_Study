@@ -134,15 +134,15 @@ void UGA_AttackBase::OnHitEventReceived(FGameplayEventData Payload)
                         DamageEffectClass, GetAbilityLevel());
                     if (SpecHandle.IsValid())
                     {
-                        // ApplyGameplayEffectSpecToTarget(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, SpecHandle, TargetDataHandle /*필요시*/);
-                        // 더 간단하게:
+                        // 타겟에게 데미지 이펙트 적용
                         TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-                        UE_LOG(LogTemp, Warning, TEXT("타겟 액터: %s"), *HitActor->GetName());
+
+                        // 타겟의 어트리뷰트 셋을 가져와 남은 체력 확인
                         if (const UCharacterAttributeSet* TargetAttributeSet = TargetASC->GetSet<
                             UCharacterAttributeSet>())
                         {
                             float TargetHealth = TargetAttributeSet->GetHealth();
-                            UE_LOG(LogTemp, Warning, TEXT("타겟의 현재 체력: %f"), TargetHealth);
+                            UE_LOG(LogTemp, Warning, TEXT("타겟: %s / 남은 체력: %f"), *HitActor->GetName(), TargetHealth);
                         }
                     }
                 }
