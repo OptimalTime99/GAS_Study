@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "GAS/GA_Jump.h"
+#include "GAS/Abilities/GA_Jump.h"
 #include "AbilitySystemComponent.h"
 #include "GameFramework/Character.h"
 #include "GAS/GAS_StudyTags.h"

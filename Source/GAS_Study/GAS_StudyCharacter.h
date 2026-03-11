@@ -58,6 +58,10 @@ protected:
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* MouseLookAction;
+	
+	/** Attack Input Action */
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* AttackAction;
 
 public:
 
@@ -70,13 +74,12 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 protected:
-
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
-
+	
 public:
 
 	/** Handles move inputs from either controls or UI interfaces */
@@ -94,6 +97,9 @@ public:
 	/** Handles jump pressed inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
+	
+	UFUNCTION(BlueprintCallable, Category="Input")
+	virtual void DoAttack();
 
 public:
 
@@ -103,12 +109,12 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Abilities")
+    TArray<TSubclassOf<class UGameplayAbility>> DefaultAbilities;
+	
 private:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "GAS|Abilities", meta=(AllowPrivateAccess = "true"))
     UAbilitySystemComponent* ASC;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS|Abilities", meta=(AllowPrivateAccess = "true"))
-	TSubclassOf<UGameplayAbility> JumpAbilityClass;
 	
 	void GiveDefaultAbilities();
 	
