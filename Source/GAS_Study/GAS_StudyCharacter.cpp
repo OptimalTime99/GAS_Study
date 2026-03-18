@@ -12,6 +12,7 @@
 #include "InputActionValue.h"
 #include "AbilitySystemComponent.h"
 #include "GAS_Study.h"
+#include "Components/ComboManagerComponent.h"
 #include "GAS/GAS_StudyTags.h"
 #include "GAS/Attributes/CharacterAttributeSet.h"
 
@@ -77,6 +78,8 @@ void AGAS_StudyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
                                            &AGAS_StudyCharacter::DoMeleeAttack);
         EnhancedInputComponent->BindAction(HeavyAttackAction, ETriggerEvent::Started, this,
                                            &AGAS_StudyCharacter::DoHeavyAttack);
+        EnhancedInputComponent->BindAction(ComboAttackAction, ETriggerEvent::Started, this,
+                                           &AGAS_StudyCharacter::DoComboAttack);
 
         // Defensing
         EnhancedInputComponent->BindAction(DefenseAction, ETriggerEvent::Started, this,
@@ -193,6 +196,14 @@ void AGAS_StudyCharacter::DoHeavyAttack()
         TagContainer.AddTag(GAS_StudyTags::Ability_Action_HeavyAttack);
 
         ASC->TryActivateAbilitiesByTag(TagContainer);
+    }
+}
+
+void AGAS_StudyCharacter::DoComboAttack()
+{
+    if (UComboManagerComponent* ComboMgr = FindComponentByClass<UComboManagerComponent>())
+    {
+        ComboMgr->RequestAttack();
     }
 }
 

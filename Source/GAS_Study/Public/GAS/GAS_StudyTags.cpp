@@ -9,4 +9,5 @@ namespace GAS_StudyTags
     UE_DEFINE_GAMEPLAY_TAG(Ability_Action_HeavyAttack, "Ability.Action.HeavyAttack");
     UE_DEFINE_GAMEPLAY_TAG(Ability_Action_Defense, "Ability.Action.Defense");
     UE_DEFINE_GAMEPLAY_TAG(State_Blocking, "State.Blocking");
+    UE_DEFINE_GAMEPLAY_TAG(State_Attacking, "State.Attacking");
 }

@@ -67,6 +67,9 @@ protected:
 
     UPROPERTY(EditAnywhere, Category="Input")
     UInputAction* HeavyAttackAction;
+    
+    UPROPERTY(EditAnywhere, Category="Input")
+    UInputAction* ComboAttackAction;
 
     UPROPERTY(EditAnywhere, Category="Input")
     UInputAction* DefenseAction;
@@ -111,6 +114,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Input")
     virtual void DoHeavyAttack();
+    
+    UFUNCTION(BlueprintCallable, Category="Input")
+    virtual void DoComboAttack();
 
     UFUNCTION(BlueprintCallable, Category="Input")
     virtual void DoDefenseStart();
