@@ -1,6 +1,10 @@
 #include "GAS/Abilities/GA_ComboAttackBase.h"
 #include"AbilitySystemComponent.h"
 #include"Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Components/ComboManagerComponent.h"
+#include "GAS/GAS_StudyTags.h"
+#include "GAS/Attributes/CharacterAttributeSet.h"
+
 
 UGA_ComboAttackBase::UGA_ComboAttackBase()
 {
@@ -22,6 +26,22 @@ void UGA_ComboAttackBase::ActivateAbility(
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
+    
+    const FComboData* MyComboData = FindMyComboData(ActorInfo);
+    
+    if (MyComboData && MyComboData->Stamina > 0.0f && StaminaCostEffectClass)
+    {
+        FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(StaminaCostEffectClass, 1.0f);
+        if (SpecHandle.IsValid())
+        {
+            SpecHandle.Data->SetSetByCallerMagnitude(
+                GAS_StudyTags::Data_Stamina_Cost,
+                -MyComboData->Stamina);
+            
+            ApplyGameplayEffectSpecToOwner(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, SpecHandle);
+        }
+        
+    }
 
     if (!MontageToPlay)
     {
@@ -42,6 +62,52 @@ void UGA_ComboAttackBase::ActivateAbility(
     Task->ReadyForActivation();
 
     UE_LOG(LogTemp, Log, TEXT("[ComboAttack] Section:%s"), *SectionName.ToString());
+}
+
+bool UGA_ComboAttackBase::CanActivateAbility(
+    const FGameplayAbilitySpecHandle Handle,
+    const FGameplayAbilityActorInfo* ActorInfo, 
+    const FGameplayTagContainer* SourceTags,
+    const FGameplayTagContainer* TargetTags, 
+    FGameplayTagContainer* OptionalRelevantTags) const
+{
+    if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags)) return false;
+    
+    
+    const FComboData* MyComboData = FindMyComboData(ActorInfo);
+    if (!MyComboData) return false;
+    
+    UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+    if (!ASC) return false;
+    
+    const UCharacterAttributeSet* AttributeSet = ASC->GetSet<UCharacterAttributeSet>();
+    if (!AttributeSet) return false;
+    
+    float CurrentStamina = AttributeSet->GetStamina();
+    float RequiredStamina = MyComboData->Stamina;
+    
+    if (CurrentStamina < RequiredStamina) return false;
+    
+    return true;
+}
+
+const FComboData* UGA_ComboAttackBase::FindMyComboData(const FGameplayAbilityActorInfo* ActorInfo) const
+{
+    AActor* AvatarActor = ActorInfo->AvatarActor.Get();
+    if (!AvatarActor) return nullptr;
+    
+    UComboManagerComponent* ComboManager = AvatarActor->FindComponentByClass<UComboManagerComponent>();
+    if (!ComboManager) return nullptr;
+    
+    for (const FComboData& AttackData : ComboManager->AttackList)
+    {
+        if (AbilityTags.HasTag(AttackData.AbilityTag))
+        {
+            return &AttackData;
+        }
+    }
+    
+    return nullptr;
 }
 
 void UGA_ComboAttackBase::OnMontageEnded()
