@@ -4,6 +4,7 @@
 #include "Components/ComboManagerComponent.h"
 #include "GAS/GAS_StudyTags.h"
 #include "GAS/Attributes/CharacterAttributeSet.h"
+#include "Subsystem/CombatManagerSubsystem.h"
 
 
 UGA_ComboAttackBase::UGA_ComboAttackBase()
@@ -62,6 +63,11 @@ void UGA_ComboAttackBase::ActivateAbility(
     Task->ReadyForActivation();
 
     UE_LOG(LogTemp, Log, TEXT("[ComboAttack] Section:%s"), *SectionName.ToString());
+    
+    if (UCombatManagerSubsystem* CombatManagerSubsystem = GetWorld()->GetSubsystem<UCombatManagerSubsystem>())
+{
+	CombatManagerSubsystem->StartCombat();
+}
 }
 
 bool UGA_ComboAttackBase::CanActivateAbility(
