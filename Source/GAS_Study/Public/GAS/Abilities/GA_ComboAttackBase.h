@@ -1,24 +1,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
+#include "GAS/Abilities/GA_AttackBase.h" // 부모 클래스 헤더 인클루드
 #include "Combat/Data/ComboData.h"
 #include "GA_ComboAttackBase.generated.h"
 
-/**
- * 콤보 공격 베이스 클래스
- * Blueprint로 01, 02, 03 생성
- */
 UCLASS()
-class UGA_ComboAttackBase : public UGameplayAbility
+class GAS_STUDY_API UGA_ComboAttackBase : public UGA_AttackBase // UGameplayAbility -> UGA_AttackBase 로 변경
 {
     GENERATED_BODY()
 
 public:
     UGA_ComboAttackBase();
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
-    UAnimMontage* MontageToPlay;
+    // 삭제: 부모 클래스의 AttackMontage를 대신 사용합니다.
+    // UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
+    // UAnimMontage* MontageToPlay;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
     FName SectionName;
@@ -36,12 +33,12 @@ protected:
         const FGameplayTagContainer* SourceTags = nullptr,
         const FGameplayTagContainer* TargetTags = nullptr,
         OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
-    
+
     const FComboData* FindMyComboData(const FGameplayAbilityActorInfo* ActorInfo) const;
-    
+
     UPROPERTY(EditDefaultsOnly, Category = "Combo")
     TSubclassOf<UGameplayEffect> StaminaCostEffectClass;
-private:
-    UFUNCTION()
-    void OnMontageEnded();
+
+    // 삭제: 부모 클래스의 OnMontageCompleted()를 사용합니다.
+    // void OnMontageEnded();
 };

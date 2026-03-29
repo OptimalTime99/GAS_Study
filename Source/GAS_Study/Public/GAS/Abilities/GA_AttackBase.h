@@ -1,14 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
 #include "GA_AttackBase.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class GAS_STUDY_API UGA_AttackBase : public UGameplayAbility
 {
@@ -23,42 +18,49 @@ public:
         const FGameplayAbilityActivationInfo ActivationInfo,
         const FGameplayEventData* TriggerEventData) override;
 
-protected:
-    /** 공격 처리 */
-    void Attack();
+    // AnimNotifyState에서 호출할 Trace Window 함수
+    void BeginTraceWindow();
+    void EndTraceWindow();
 
-    // 🌟 추가: 몽타주 재생이 끝났을 때 호출될 함수
     UFUNCTION()
     void OnMontageCompleted();
 
-    /** 공격 애니메이션 Montage */
-    UPROPERTY(EditDefaultsOnly, Category = "Combat")
+protected:
+    void Attack();
+    
+    // 타이머가 반복 호출할 실제 Trace 함수
+    UFUNCTION()
+    void PerformMeleeTrace();
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat")
     TObjectPtr<UAnimMontage> AttackMontage;
 
     TWeakObjectPtr<class AGAS_StudyCharacter> Character;
 
 protected:
-    // 🌟 이벤트가 들어왔을 때 실행될 함수
-    UFUNCTION()
-    void OnHitEventReceived(FGameplayEventData Payload);
-
-    // 🌟 노티파이에 있던 설정들을 어빌리티로 이사시킵니다.
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Damage")
     TSubclassOf<class UGameplayEffect> DamageEffectClass;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Trace")
     float TraceRadius = 50.0f;
 
+    // 트레이스할 소켓 이름
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Trace")
-    float TraceStartDistance = 50.0f;
+    FName TraceSocketName = FName("hand_r");
 
+    // 트레이스 간격 (약 60FPS)
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Trace")
-    float TraceEndDistance = 150.0f;
+    float TraceInterval = 0.016f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Debug")
     bool bShowDebug = false;
 
-    // 어빌리티가 몽타주 재생 중 기다릴 타격 이벤트 태그
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Tags")
-    FGameplayTag HitEventTag;
+private:
+    // Trace 상태 및 타이머 관리, 중복 타격 방지용 TSet
+    bool bIsTracing = false;
+    FTimerHandle TraceTimerHandle;
+
+    // 공격 1회(Trace Window)당 Hit한 액터들을 기록하여 중복 데미지 방지
+    UPROPERTY()
+    TSet<AActor*> HitActors;
 };

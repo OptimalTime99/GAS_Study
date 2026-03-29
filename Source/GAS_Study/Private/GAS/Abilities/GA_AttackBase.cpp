@@ -1,23 +1,15 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "GAS/Abilities/GA_AttackBase.h"
-
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "GAS_StudyCharacter.h"
 #include "GAS/GAS_StudyTags.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
-#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "GAS/Attributes/CharacterAttributeSet.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 UGA_AttackBase::UGA_AttackBase()
 {
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-
-    FGameplayTag AttackTag = GAS_StudyTags::Ability_Action_Attack;
-    ActivationOwnedTags.AddTag(AttackTag);
+    ActivationOwnedTags.AddTag(GAS_StudyTags::Ability_Action_Attack);
 }
 
 void UGA_AttackBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -43,57 +35,73 @@ void UGA_AttackBase::Attack()
 {
     if (AttackMontage)
     {
-        // 🌟 1. 몽타주 재생 태스크
         UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
             this,
             NAME_None,
             AttackMontage
         );
 
-        // 몽타주가 정상 종료되거나, 끊기거나, 취소되었을 때 모두 OnMontageCompleted 함수를 실행하도록 바인딩합니다.
         MontageTask->OnBlendOut.AddDynamic(this, &UGA_AttackBase::OnMontageCompleted);
         MontageTask->OnCompleted.AddDynamic(this, &UGA_AttackBase::OnMontageCompleted);
         MontageTask->OnInterrupted.AddDynamic(this, &UGA_AttackBase::OnMontageCompleted);
         MontageTask->OnCancelled.AddDynamic(this, &UGA_AttackBase::OnMontageCompleted);
 
-        // 태스크 실행!
         MontageTask->ReadyForActivation();
 
-        if (!HitEventTag.IsValid())
-        {
-            UE_LOG(LogTemp, Error, TEXT("[%s] HitEventTag가 세팅되지 않았습니다!"), *GetName());
-        }
-
-        // 2. 🌟 노티파이가 쏘는 Hit 이벤트를 기다리는 태스크
-        UAbilityTask_WaitGameplayEvent* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-            this,
-            HitEventTag, // 기다릴 태그
-            nullptr, false, false);
-
-        WaitEventTask->EventReceived.AddDynamic(this, &UGA_AttackBase::OnHitEventReceived);
-        WaitEventTask->ReadyForActivation();
+        // WaitGameplayEvent 태스크 삭제 (NotifyState가 타이밍을 제어함)
     }
     else
     {
-        // 몽타주가 없다면 바로 종료합니다.
         EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
     }
 }
 
 void UGA_AttackBase::OnMontageCompleted()
 {
+    EndTraceWindow(); // 만약 몽타주가 끊겼을 때를 대비해 타이머 종료
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
-void UGA_AttackBase::OnHitEventReceived(FGameplayEventData Payload)
+void UGA_AttackBase::BeginTraceWindow()
 {
-    // 노티파이에서 호출됨!
-    if (!Character.IsValid()) return;
-    AActor* Avatar = Character.Get();
+    if (bIsTracing) return;
+    bIsTracing = true;
+    HitActors.Empty(); // 새로운 타격 윈도우 시작 시 초기화
 
-    FVector Forward = Avatar->GetActorForwardVector();
-    FVector Start = Avatar->GetActorLocation() + Forward * TraceStartDistance;
-    FVector End = Avatar->GetActorLocation() + Forward * TraceEndDistance;
+    if (UWorld* World = GetWorld())
+    {
+        // TraceInterval 마다 PerformMeleeTrace 호출
+        World->GetTimerManager().SetTimer(TraceTimerHandle, this, &UGA_AttackBase::PerformMeleeTrace, TraceInterval,
+                                          true, 0.0f);
+    }
+}
+
+void UGA_AttackBase::EndTraceWindow()
+{
+    if (!bIsTracing) return;
+    bIsTracing = false;
+
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(TraceTimerHandle);
+    }
+}
+
+void UGA_AttackBase::PerformMeleeTrace()
+{
+    Character = Cast<AGAS_StudyCharacter>(GetAvatarActorFromActorInfo());
+
+    if (!Character.IsValid())
+    {
+        return;
+    }
+    AActor* Avatar = Character.Get();
+    USkeletalMeshComponent* Mesh = Character->GetMesh(); // 캐시해두면 더 좋습니다.
+
+    // 정면 기준이 아닌 Socket 위치 기준 트레이스
+    FVector SocketLocation = Mesh->GetSocketLocation(TraceSocketName);
+    FVector Start = SocketLocation;
+    FVector End = SocketLocation + (Avatar->GetActorForwardVector() * 5.0f); // Sweep을 위한 미세한 이동 오프셋
 
     TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
     ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
@@ -102,51 +110,51 @@ void UGA_AttackBase::OnHitEventReceived(FGameplayEventData Payload)
     TArray<AActor*> ActorsToIgnore;
     ActorsToIgnore.Add(Avatar);
 
-    EDrawDebugTrace::Type DebugType = bShowDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
+    EDrawDebugTrace::Type DebugType = EDrawDebugTrace::None;
 
     bool bHit = UKismetSystemLibrary::SphereTraceMultiForObjects(
-        Avatar,
-        Start,
-        End,
-        TraceRadius,
-        ObjectTypes,
-        false,
-        ActorsToIgnore,
-        DebugType,
-        HitResults,
-        true,
-        FLinearColor::Red,
-        FLinearColor::Green,
-        2.0f);
+        Character.Get(), Start, End, TraceRadius, ObjectTypes, false, ActorsToIgnore, DebugType, HitResults, true,
+        FLinearColor::Red, FLinearColor::Green, 2.0f);
+
+    // 2. 수동 디버그 드로우 추가: 강의 자료 방식 
+    if (bShowDebug)
+    {
+        // Hit 여부에 따라 색상 결정 (맞으면 빨강, 안 맞으면 초록) 
+        FColor DebugColor = bHit ? FColor::Red : FColor::Green;
+
+        // 직접 구체 그리기 (2.0f는 2초 동안 화면에 남기겠다는 뜻입니다)
+        DrawDebugSphere(GetWorld(), Start, TraceRadius, 12, DebugColor, false, 2.0f);
+    }
 
     if (bHit && DamageEffectClass)
     {
-        TSet<AActor*> ProcessedActors;
         for (const FHitResult& Hit : HitResults)
         {
             AActor* HitActor = Hit.GetActor();
-            if (HitActor && !ProcessedActors.Contains(HitActor))
+            
+            // TSet에 없는 녀석일 때만 통과 (즉, 이번 공격에서 처음 맞은 녀석)
+            if (HitActor && !HitActors.Contains(HitActor)) 
             {
-                ProcessedActors.Add(HitActor);
+                HitActors.Add(HitActor); // 명단에 추가!
 
-                // 어빌리티 내부이므로 ASC를 쉽게 가져와서 데미지를 적용할 수 있습니다.
-                UAbilitySystemComponent* TargetASC =
-                    UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+                UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
                 if (TargetASC)
                 {
-                    FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(
-                        DamageEffectClass, GetAbilityLevel());
+                    FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(DamageEffectClass, GetAbilityLevel());
                     if (SpecHandle.IsValid())
                     {
-                        // 타겟에게 데미지 이펙트 적용
+                        // 실제 데미지 적용
                         TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+                        
+                        // 1. 출력 로그(Output Log)에 띄우기
+                        UE_LOG(LogTemp, Warning, TEXT("[%s]에게 데미지 적용 완료!"), *HitActor->GetName());
 
-                        // 타겟의 어트리뷰트 셋을 가져와 남은 체력 확인
-                        if (const UCharacterAttributeSet* TargetAttributeSet = TargetASC->GetSet<
-                            UCharacterAttributeSet>())
+                        // 2. 게임 화면 좌측 상단에 띄우기 (플레이 중 바로 확인 가능)
+                        if (GEngine)
                         {
-                            float TargetHealth = TargetAttributeSet->GetHealth();
-                            UE_LOG(LogTemp, Warning, TEXT("타겟: %s / 남은 체력: %f"), *HitActor->GetName(), TargetHealth);
+                            FString DebugMsg = FString::Printf(TEXT("[%s] Hit!"), *HitActor->GetName());
+                            // 2초 동안 파란색으로 화면에 띄웁니다
+                            GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan, DebugMsg); 
                         }
                     }
                 }
