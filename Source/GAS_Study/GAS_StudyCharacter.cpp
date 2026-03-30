@@ -86,6 +86,10 @@ void AGAS_StudyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
                                            &AGAS_StudyCharacter::DoDefenseStart);
         EnhancedInputComponent->BindAction(DefenseAction, ETriggerEvent::Completed, this,
                                            &AGAS_StudyCharacter::DoDefenseEnd);
+
+        // Roll
+        EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this,
+                                           &AGAS_StudyCharacter::DoRollStart);
     }
     else
     {
@@ -226,6 +230,17 @@ void AGAS_StudyCharacter::DoDefenseEnd()
         TagContainer.AddTag(GAS_StudyTags::Ability_Action_Defense);
 
         ASC->CancelAbilities(&TagContainer);
+    }
+}
+
+void AGAS_StudyCharacter::DoRollStart()
+{
+    if (ASC)
+    {
+        FGameplayTagContainer TagContainer;
+        TagContainer.AddTag(GAS_StudyTags::Ability_Action_Roll);
+
+        ASC->TryActivateAbilitiesByTag(TagContainer);
     }
 }
 

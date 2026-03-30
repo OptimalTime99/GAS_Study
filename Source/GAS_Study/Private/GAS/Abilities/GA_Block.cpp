@@ -22,13 +22,7 @@ void UGA_Block::ActivateAbility(
     const FGameplayEventData* TriggerEventData)
 {
     Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
-    if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
-
+    
     Character = Cast<AGAS_StudyCharacter>(ActorInfo->AvatarActor.Get());
 
     if (Character.IsValid())

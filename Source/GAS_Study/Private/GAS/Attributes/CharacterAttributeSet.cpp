@@ -6,7 +6,7 @@
 
 UCharacterAttributeSet::UCharacterAttributeSet()
 {
-    InitHealth(50.0f);
+    InitHealth(90.0f);
     InitMaxHealth(100.0f);
     InitDefense(0.0f);
     InitMaxDefense(100.0f);
