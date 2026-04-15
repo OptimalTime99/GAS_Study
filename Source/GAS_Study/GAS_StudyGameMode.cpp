@@ -2,7 +2,10 @@
 
 #include "GAS_StudyGameMode.h"
 
+#include "Character/MyPlayerState.h"
+
 AGAS_StudyGameMode::AGAS_StudyGameMode()
 {
-	// stub
+	PlayerStateClass = AMyPlayerState::StaticClass();
 }
+

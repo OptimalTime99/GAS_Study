@@ -4,6 +4,8 @@
 #include "GAS_StudyCharacter.h"
 #include "GAS/GAS_StudyTags.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Components/ComboManagerComponent.h"
+#include "GAS/Attributes/EnemyAttributeSet.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 UGA_AttackBase::UGA_AttackBase()
@@ -19,16 +21,26 @@ void UGA_AttackBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 {
     Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-    Character = Cast<AGAS_StudyCharacter>(ActorInfo->AvatarActor.Get());
+    UE_LOG(LogTemp, Warning, TEXT("GA_Attack 시작 - 현재 추출된 데미지: %.2f"), CurrentDamage);
 
-    if (Character.IsValid())
+    Character = Cast<AGAS_StudyCharacter>(ActorInfo->AvatarActor.Get());
+    if (UComboManagerComponent* ComboMgr = Character->FindComponentByClass<UComboManagerComponent>())
     {
-        Attack();
+        // 현재 실행 중인 콤보의 인덱스를 가져옴
+        int32 Idx = ComboMgr->GetCurrentComboIndex();
+
+        // AttackList에서 해당 인덱스의 데미지를 미리 변수에 저장
+        for (const FComboData& Data : ComboMgr->AttackList)
+        {
+            if (Data.ComboIndex == Idx)
+            {
+                CurrentDamage = Data.Damage;
+                break;
+            }
+        }
+        UE_LOG(LogTemp, Warning, TEXT("[GA_Attack] Index: %d, Damage: %.2f 캐싱 완료"), Idx, CurrentDamage);
     }
-    else
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-    }
+    Attack();
 }
 
 void UGA_AttackBase::Attack()
@@ -90,18 +102,14 @@ void UGA_AttackBase::EndTraceWindow()
 void UGA_AttackBase::PerformMeleeTrace()
 {
     Character = Cast<AGAS_StudyCharacter>(GetAvatarActorFromActorInfo());
+    if (!Character.IsValid()) return;
 
-    if (!Character.IsValid())
-    {
-        return;
-    }
     AActor* Avatar = Character.Get();
-    USkeletalMeshComponent* Mesh = Character->GetMesh(); // 캐시해두면 더 좋습니다.
+    USkeletalMeshComponent* Mesh = Character->GetMesh();
 
-    // 정면 기준이 아닌 Socket 위치 기준 트레이스
     FVector SocketLocation = Mesh->GetSocketLocation(TraceSocketName);
     FVector Start = SocketLocation;
-    FVector End = SocketLocation + (Avatar->GetActorForwardVector() * 5.0f); // Sweep을 위한 미세한 이동 오프셋
+    FVector End = SocketLocation + (Avatar->GetActorForwardVector() * 5.0f);
 
     TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
     ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
@@ -110,52 +118,59 @@ void UGA_AttackBase::PerformMeleeTrace()
     TArray<AActor*> ActorsToIgnore;
     ActorsToIgnore.Add(Avatar);
 
-    EDrawDebugTrace::Type DebugType = EDrawDebugTrace::None;
-
     bool bHit = UKismetSystemLibrary::SphereTraceMultiForObjects(
-        Character.Get(), Start, End, TraceRadius, ObjectTypes, false, ActorsToIgnore, DebugType, HitResults, true,
+        Character.Get(), Start, End, TraceRadius, ObjectTypes, false, ActorsToIgnore, EDrawDebugTrace::None, HitResults,
+        true,
         FLinearColor::Red, FLinearColor::Green, 2.0f);
-
-    // 2. 수동 디버그 드로우 추가: 강의 자료 방식 
-    if (bShowDebug)
-    {
-        // Hit 여부에 따라 색상 결정 (맞으면 빨강, 안 맞으면 초록) 
-        FColor DebugColor = bHit ? FColor::Red : FColor::Green;
-
-        // 직접 구체 그리기 (2.0f는 2초 동안 화면에 남기겠다는 뜻입니다)
-        DrawDebugSphere(GetWorld(), Start, TraceRadius, 12, DebugColor, false, 2.0f);
-    }
 
     if (bHit && DamageEffectClass)
     {
+        // [중요] 때리는 순간의 최신 데미지 수치를 다시 한번 가져옵니다.
+        float FinalDamage = 0.f;
+        if (UComboManagerComponent* ComboMgr = Character->FindComponentByClass<UComboManagerComponent>())
+        {
+            int32 CurrentIdx = ComboMgr->GetCurrentComboIndex();
+            for (const FComboData& ComboData : ComboMgr->AttackList)
+            {
+                if (ComboData.ComboIndex == CurrentIdx)
+                {
+                    FinalDamage = ComboData.Damage;
+                    break;
+                }
+            }
+        }
+
         for (const FHitResult& Hit : HitResults)
         {
             AActor* HitActor = Hit.GetActor();
-            
-            // TSet에 없는 녀석일 때만 통과 (즉, 이번 공격에서 처음 맞은 녀석)
-            if (HitActor && !HitActors.Contains(HitActor)) 
+            if (HitActor && !HitActors.Contains(HitActor))
             {
-                HitActors.Add(HitActor); // 명단에 추가!
-
+                HitActors.Add(HitActor);
                 UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+                
                 if (TargetASC)
                 {
                     FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(DamageEffectClass, GetAbilityLevel());
                     if (SpecHandle.IsValid())
                     {
-                        // 실제 데미지 적용
-                        TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-                        
-                        // 1. 출력 로그(Output Log)에 띄우기
-                        UE_LOG(LogTemp, Warning, TEXT("[%s]에게 데미지 적용 완료!"), *HitActor->GetName());
+                        // 1. 요청하신 Data.Damage.Cost 태그로 데미지 주입 (UE 5.6.1 명칭)
+                        FGameplayTag DataTag = FGameplayTag::RequestGameplayTag(FName("Data.Damage.Cost"));
+                        SpecHandle.Data.Get()->SetSetByCallerMagnitude(DataTag, FinalDamage);
 
-                        // 2. 게임 화면 좌측 상단에 띄우기 (플레이 중 바로 확인 가능)
-                        if (GEngine)
-                        {
-                            FString DebugMsg = FString::Printf(TEXT("[%s] Hit!"), *HitActor->GetName());
-                            // 2초 동안 파란색으로 화면에 띄웁니다
-                            GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan, DebugMsg); 
-                        }
+                        // 2. 데미지 적용
+                        TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+                        // 3. 체력 정보 가져오기 (UEnemyAttributeSet 사용)
+                        float CurrentHP = TargetASC->GetNumericAttribute(UEnemyAttributeSet::GetHealthAttribute());
+                        float MaxHP = TargetASC->GetNumericAttribute(UEnemyAttributeSet::GetMaxHealthAttribute());
+
+                        // [로그] 데미지 전달 확인
+                        UE_LOG(LogTemp, Log, TEXT("Index:%d | Damage:%.2f -> %s | HP:%.2f"), 
+                               Character->FindComponentByClass<UComboManagerComponent>()->GetCurrentComboIndex(),
+                               FinalDamage, *HitActor->GetName(), CurrentHP);
+
+                        // 4. UI 업데이트 호출
+                        Character->UpdateEnemyHPOnHUD(CurrentHP, MaxHP);
                     }
                 }
             }

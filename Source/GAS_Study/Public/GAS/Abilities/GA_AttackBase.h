@@ -63,4 +63,9 @@ private:
     // 공격 1회(Trace Window)당 Hit한 액터들을 기록하여 중복 데미지 방지
     UPROPERTY()
     TSet<AActor*> HitActors;
+    
+protected:
+    // 현재 콤보에서 가져온 데미지 수치
+    float CurrentDamage = 0.0f;
+    
 };

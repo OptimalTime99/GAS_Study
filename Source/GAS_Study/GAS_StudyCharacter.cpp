@@ -12,9 +12,31 @@
 #include "InputActionValue.h"
 #include "AbilitySystemComponent.h"
 #include "GAS_Study.h"
+#include "Blueprint/UserWidget.h"
+#include "Character/MyPlayerState.h"
 #include "Components/ComboManagerComponent.h"
+#include "Components/ProgressBar.h"
 #include "GAS/GAS_StudyTags.h"
 #include "GAS/Attributes/CharacterAttributeSet.h"
+#include "UI/EnemyHPBar.h"
+#include "UI/PlayerHUDWidget.h"
+
+UAbilitySystemComponent* AGAS_StudyCharacter::GetAbilitySystemComponent() const
+{
+    // 캐시된 참조가 있으면 사용
+    if (ASC)
+    {
+        return ASC;
+    }
+
+    // 없으면 PlayerState에서 가져옴
+    if (const AMyPlayerState* PS = GetPlayerState<AMyPlayerState>())
+    {
+        return PS->GetAbilitySystemComponent();
+    }
+
+    return nullptr;
+}
 
 AGAS_StudyCharacter::AGAS_StudyCharacter()
 {
@@ -49,10 +71,6 @@ AGAS_StudyCharacter::AGAS_StudyCharacter()
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
     FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
     FollowCamera->bUsePawnControlRotation = false;
-
-    ASC = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("ASC"));
-
-    AttributeSet = CreateDefaultSubobject<UCharacterAttributeSet>(TEXT("Attribute Set"));
 }
 
 void AGAS_StudyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -265,12 +283,154 @@ void AGAS_StudyCharacter::PossessedBy(AController* NewController)
 {
     Super::PossessedBy(NewController);
 
+    // 서버에서 호출됨
+    InitializeAbilitySystem();
+    GiveDefaultAbilities();
+}
+
+void AGAS_StudyCharacter::OnRep_PlayerState()
+{
+    Super::OnRep_PlayerState();
+
+    // 클라이언트에서 호출됨
+    InitializeAbilitySystem();
+    // Ability 부여는 서버에서만 (클라이언트에서는 복제됨)
+}
+
+void AGAS_StudyCharacter::InitializeAbilitySystem()
+{
+    AMyPlayerState* PS = GetPlayerState<AMyPlayerState>();
+    if (!PS)
+    {
+        return;
+    }
+
+    // PlayerState에서 ASC 가져와서 캐시
+    ASC = PS->GetAbilitySystemComponent();
+    AttributeSet = PS->GetAttributeSet();
+
     if (ASC)
     {
-        // 1. ASC에게 Owner와 Avatar가 이 캐릭터(this)임을 알려주어 초기화합니다. (매우 중요!)
-        ASC->InitAbilityActorInfo(this, this);
+        // InitAbilityActorInfo 핵심!
+        // Owner: PlayerState (ASC 소유자)
+        // Avatar: this (물리적 캐릭터)
+        ASC->InitAbilityActorInfo(PS, this);
 
-        // 2. 어빌리티 부여 함수 호출
-        GiveDefaultAbilities();
+        UE_LOG(LogTemp, Log, TEXT("[%s] ASC initialized from PlayerState"), *GetName());
+    }
+}
+
+UCharacterAttributeSet* AGAS_StudyCharacter::GetAttributeSet() const
+{
+    // 캐시된 참조가 있으면 사용
+    if (AttributeSet)
+    {
+        return AttributeSet;
+    }
+
+    // 없으면 PlayerState에서 가져옴
+    if (const AMyPlayerState* PS = GetPlayerState<AMyPlayerState>())
+    {
+        return PS->GetAttributeSet();
+    }
+
+    return nullptr;
+}
+
+void AGAS_StudyCharacter::SetMainHUDWidget(UUserWidget* InWidget)
+{
+    MainHUDWidget = InWidget;
+}
+
+void AGAS_StudyCharacter::UpdatePlayerHUD_EnemyHP(float CurrentHP, float MaxHP)
+{
+    if (!MainHUDWidget) return;
+
+    // 1. WBP_Player 내부에 있는 WBP_EnemyHPBar라는 이름의 위젯을 찾습니다.
+    // (위젯 블루프린트에서 해당 위젯 변수 이름이 'WBP_EnemyHPBar'여야 합니다)
+    UEnemyHPBar* HPBarWidget = Cast<UEnemyHPBar>(MainHUDWidget->GetWidgetFromName(TEXT("WBP_EnemyHPBar")));
+
+    if (HPBarWidget)
+    {
+        // 2. 그 안에 있는 ProgressBar를 찾습니다. (이름이 'HPProgressBar'라고 가정)
+        UProgressBar* ProgressBar = Cast<UProgressBar>(HPBarWidget->GetWidgetFromName(TEXT("HPProgressBar")));
+
+        if (ProgressBar && MaxHP > 0.f)
+        {
+            ProgressBar->SetPercent(CurrentHP / MaxHP);
+
+            // 3. 체력이 0보다 크면 보이게, 0이면 숨기기 (선택 사항)
+            HPBarWidget->SetVisibility(CurrentHP > 0.f ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+        }
+    }
+}
+
+void AGAS_StudyCharacter::UpdateEnemyHPOnHUD(float CurrentHP, float MaxHP)
+{
+    if (!MainHUDWidget)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("MainHUDWidget이 없습니다!"));
+        return;
+    }
+
+    // 1단계: WBP_Player 내부에서 'WBP_EnemyHPBar' 위젯을 찾습니다.
+    UUserWidget* EnemyHPBarWidget = Cast<UUserWidget>(MainHUDWidget->GetWidgetFromName(TEXT("WBP_EnemyHPBar")));
+    
+    if (EnemyHPBarWidget)
+    {
+        // [중요] 2단계: 찾은 'WBP_EnemyHPBar' 내부에서 다시 'HPProgressBar'를 찾아야 합니다.
+        // 그냥 MainHUDWidget에서 찾으면 못 찾을 확률이 높습니다.
+        UProgressBar* HPBar = Cast<UProgressBar>(EnemyHPBarWidget->GetWidgetFromName(TEXT("HPProgressBar")));
+        
+        if (HPBar)
+        {
+            float Percent = (MaxHP > 0.f) ? (CurrentHP / MaxHP) : 0.f;
+            HPBar->SetPercent(Percent);
+            
+            // 데미지를 입었을 때만 보이게 설정
+            EnemyHPBarWidget->SetVisibility(ESlateVisibility::Visible);
+            
+            UE_LOG(LogTemp, Log, TEXT("UI 업데이트 성공: %f%%"), Percent * 100.f);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("WBP_EnemyHPBar 안에서 'HPProgressBar'를 찾지 못했습니다!"));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("MainHUDWidget 안에서 'WBP_EnemyHPBar'를 찾지 못했습니다!"));
+    }
+}
+
+void AGAS_StudyCharacter::BeginPlay()
+{
+    Super::BeginPlay();
+    
+    // 1. 내 캐릭터(로컬 플레이어)인 경우에만 UI를 생성합니다. (네트워크 멀티플레이 방지)
+    if (IsLocallyControlled())
+    {
+        APlayerController* PC = Cast<APlayerController>(GetController());
+        
+        // 2. 에디터에서 PlayerHUDClass(WBP_Player)가 잘 등록되었는지 확인
+        if (PC && PlayerHUDClass)
+        {
+            // 3. 위젯 생성
+            UUserWidget* CreatedWidget = CreateWidget<UUserWidget>(PC, PlayerHUDClass);
+            if (CreatedWidget)
+            {
+                // 4. 화면에 띄우기
+                CreatedWidget->AddToViewport();
+
+                // 5. [핵심] 완성된 위젯의 주소를 MainHUDWidget 변수에 저장!
+                SetMainHUDWidget(CreatedWidget);
+
+                UE_LOG(LogTemp, Log, TEXT("C++에서 UI 생성 및 MainHUDWidget 연결 완료!"));
+            }
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("PlayerHUDClass가 설정되지 않았습니다. 블루프린트를 확인하세요."));
+        }
     }
 }

@@ -15,4 +15,5 @@ namespace GAS_StudyTags
     UE_DEFINE_GAMEPLAY_TAG(State_Dodging, "State.Dodging");
     UE_DEFINE_GAMEPLAY_TAG(State_Invincible, "State.Invincible");
     UE_DEFINE_GAMEPLAY_TAG(Data_Stamina_Cost, "Data.Stamina.Cost");
+    UE_DEFINE_GAMEPLAY_TAG(Data_Damage_Cost, "Data.Damage.Cost");
 }

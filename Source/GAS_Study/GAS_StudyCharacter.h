@@ -25,10 +25,7 @@ UCLASS(abstract)
 class AGAS_StudyCharacter : public ACharacter, public IAbilitySystemInterface
 {
 public:
-    virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override
-    {
-        return ASC;
-    }
+    virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 private:
     GENERATED_BODY()
@@ -149,6 +146,38 @@ private:
     // 컨트롤러가 캐릭터에 빙의될 때 호출되는 엔진 함수 오버라이드
     virtual void PossessedBy(AController* NewController) override;
 
+    virtual void OnRep_PlayerState() override;
+
+    // ASC 초기화 (PlayerState에서 가져와서 InitAbilityActorInfo 호출)
+    virtual void InitializeAbilitySystem();
+
     UPROPERTY()
-    const UCharacterAttributeSet* AttributeSet;
+    TObjectPtr<UCharacterAttributeSet> AttributeSet;
+
+    // AttributeSet 접근자 (PlayerState에서 가져옴)
+    UFUNCTION(BlueprintCallable, Category = "Attributes")
+    UCharacterAttributeSet* GetAttributeSet() const;
+
+public:
+    // UI 위젯을 등록하기 위한 함수 (블루프린트 BeginPlay 등에서 설정)
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void SetMainHUDWidget(UUserWidget* InWidget);
+
+    // 실제 체력을 업데이트하는 함수
+    void UpdatePlayerHUD_EnemyHP(float CurrentHP, float MaxHP);
+
+public:
+    // 블루프린트(BP_PlayerCharacter)의 BeginPlay에서 생성된 WBP_Player를 여기 넣어줄 겁니다.
+    UPROPERTY(BlueprintReadWrite, Category = "UI")
+    TObjectPtr<UUserWidget> MainHUDWidget;
+
+    // GA에서 호출할 UI 업데이트 함수
+    void UpdateEnemyHPOnHUD(float CurrentHP, float MaxHP);
+    
+protected:
+    virtual void BeginPlay() override;
+
+    /** 에디터에서 생성할 WBP_Player 블루프린트 클래스를 선택할 수 있도록 노출 */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+    TSubclassOf<UUserWidget> PlayerHUDClass;
 };
